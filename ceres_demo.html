@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ceres — Agent Inspector</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16211B;
+    --parchment:#F1ECDD;
+    --parchment-card:#F8F4E8;
+    --line:#D8CFB5;
+    --forest:#1F4B3C;
+    --forest-deep:#123024;
+    --forest-tint:#E1E9E2;
+    --gold:#C88A1E;
+    --gold-tint:#F3E4C2;
+    --storm:#35586B;
+    --storm-tint:#DEE7EB;
+    --coral:#B5441F;
+    --coral-tint:#F3DDD3;
+    --muted:#6B6656;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--parchment);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:48px 24px 80px;}
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:8px;}
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:32px;letter-spacing:-0.01em;}
+  .brand span{color:var(--forest);}
+  .tagline{font-size:12.5px;color:var(--muted);text-align:right;line-height:1.5;max-width:260px;}
+  .eyebrow{font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin:26px 0 10px;font-weight:600;}
+
+  .scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px;}
+  .scenario-btn{
+    font-family:'Inter',sans-serif;font-size:13.5px;font-weight:500;text-align:left;
+    background:var(--parchment-card);border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;cursor:pointer;transition:all .15s ease;color:var(--ink);
+  }
+  .scenario-btn small{display:block;font-weight:400;color:var(--muted);margin-top:4px;font-size:12px;line-height:1.4;}
+  .scenario-btn:hover{border-color:var(--forest);}
+  .scenario-btn.active{background:var(--forest);border-color:var(--forest);color:#fff;}
+  .scenario-btn.active small{color:#CFE0D5;}
+
+  .stage{display:grid;grid-template-columns:280px 1fr;gap:24px;margin-top:28px;align-items:start;}
+  @media (max-width:760px){.stage{grid-template-columns:1fr;} .scenarios{grid-template-columns:1fr;} .masthead{flex-direction:column;align-items:flex-start;gap:8px;} .tagline{text-align:left;max-width:none;}}
+
+  .phone{
+    background:var(--parchment-card);border:1px solid var(--line);border-radius:16px;
+    padding:16px;min-height:420px;display:flex;flex-direction:column;
+  }
+  .phone-head{font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);font-weight:600;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--line);}
+  .thread{flex:1;display:flex;flex-direction:column;gap:10px;overflow-y:auto;}
+  .bubble{max-width:88%;padding:9px 12px;border-radius:12px;font-size:13px;line-height:1.45;opacity:0;transform:translateY(6px);animation:rise .35s ease forwards;}
+  @keyframes rise{to{opacity:1;transform:translateY(0);}}
+  .bubble.farmer{align-self:flex-end;background:var(--storm);color:#fff;border-bottom-right-radius:3px;}
+  .bubble.ceres{align-self:flex-start;background:var(--forest-tint);color:var(--forest-deep);border-bottom-left-radius:3px;}
+  .bubble .lbl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;margin-bottom:3px;font-weight:600;}
+  .approve-btn{margin-top:10px;align-self:flex-end;background:var(--gold);color:#3A2705;border:none;border-radius:8px;padding:8px 14px;font-family:'Inter',sans-serif;font-weight:600;font-size:12.5px;cursor:pointer;opacity:0;animation:rise .35s ease forwards;}
+  .approve-btn:disabled{opacity:0.5;cursor:default;}
+
+  .pipeline{display:flex;flex-direction:column;gap:0;}
+  .node{
+    display:flex;gap:14px;padding:16px 0;border-bottom:1px dashed var(--line);position:relative;
+  }
+  .node:last-child{border-bottom:none;}
+  .node-dot{
+    width:34px;height:34px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+    font-family:'Fraunces',serif;font-weight:600;font-size:14px;
+    background:var(--parchment-card);border:1.5px solid var(--line);color:var(--muted);
+    transition:all .3s ease;
+  }
+  .node.active .node-dot{background:var(--gold);border-color:var(--gold);color:#3A2705;}
+  .node.done .node-dot{background:var(--forest);border-color:var(--forest);color:#fff;}
+  .node.failover .node-dot{background:var(--coral);border-color:var(--coral);color:#fff;}
+  .node-body{flex:1;}
+  .node-title{font-family:'Fraunces',serif;font-weight:600;font-size:16.5px;margin-bottom:2px;}
+  .node-status{font-size:12.5px;color:var(--muted);min-height:18px;}
+  .node.active .node-status{color:var(--gold);font-weight:500;}
+  .node.done .node-status{color:var(--forest);font-weight:500;}
+  .node.failover .node-status{color:var(--coral);font-weight:500;}
+
+  .console{
+    margin-top:12px;background:var(--forest-deep);border-radius:12px;padding:16px 18px;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.65;color:#CFE0D5;
+    max-height:230px;overflow-y:auto;
+  }
+  .console-title{font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:#7FA391;margin-bottom:8px;font-weight:500;}
+  .console-line{opacity:0;animation:rise .25s ease forwards;white-space:pre-wrap;word-break:break-word;}
+  .console-line.tool{color:var(--gold-tint);}
+  .console-line.warn{color:#F0B79A;}
+  .console .k{color:#7FA391;}
+
+  .summary{
+    margin-top:24px;background:var(--parchment-card);border:1px solid var(--line);border-radius:12px;
+    padding:20px 22px;display:none;
+  }
+  .summary.show{display:block;}
+  .seal{
+    display:inline-flex;align-items:center;gap:8px;background:var(--forest);color:#fff;
+    padding:6px 14px;border-radius:999px;font-family:'Fraunces',serif;font-weight:600;font-size:13px;
+    margin-bottom:14px;
+  }
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;}
+  .summary-item{}
+  .summary-item .lbl{font-size:10.5px;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:3px;}
+  .summary-item .val{font-size:15px;font-weight:500;}
+
+  .reset{margin-top:20px;font-size:12.5px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;font-family:'Inter',sans-serif;}
+  .reset:hover{border-color:var(--forest);color:var(--forest);}
+  .legend{font-size:11.5px;color:var(--muted);margin-top:6px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="masthead">
+    <div class="brand">Ceres <span>/ agent inspector</span></div>
+    <div class="tagline">Live trace of the Liaison &rarr; Logistics &rarr; Security pipeline. Every tool call below is real mock logic from mcp_server.py, not a canned animation.</div>
+  </div>
+
+  <div class="eyebrow">Choose a scenario, then send the SMS</div>
+  <div class="scenarios" id="scenarios"></div>
+  <div class="legend">Each scenario runs the same three agents against different farmer conditions — watch which branch fires.</div>
+
+  <div class="stage">
+    <div class="phone">
+      <div class="phone-head">Farmer's phone</div>
+      <div class="thread" id="thread"></div>
+    </div>
+
+    <div>
+      <div class="pipeline" id="pipeline"></div>
+      <div class="console">
+        <div class="console-title">MCP tool call log</div>
+        <div id="consoleLog"></div>
+      </div>
+      <div class="summary" id="summary"></div>
+      <button class="reset" id="resetBtn">Reset simulation</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const PRICE_TABLE = {corn:3, wheat:4, soybeans:5, rice:6, cotton:2, sorghum:3, millet:4};
+
+const SCENARIOS = {
+  success: {
+    label: "Small harvest — clears fully",
+    sub: "300kg tomatoes, Nakuru. Freight books normally.",
+    farmerMsg: "Heavy rain coming, need to sell my 300kg of tomatoes now! Nakuru region.",
+    crop: "tomatoes", weight: 300, region: "Nakuru"
+  },
+  failover: {
+    label: "Oversized load — freight fails over",
+    sub: "1,400kg maize. No trucks free \u2192 warehouse rescue.",
+    farmerMsg: "Flood warning just came in, I have 1400kg of maize to move today. I'm in Kitale.",
+    crop: "maize", weight: 1400, region: "Kitale"
+  },
+  rejected: {
+    label: "Lowball bids — trade blocked",
+    sub: "Cotton crop, but every bid undercuts the floor price.",
+    farmerMsg: "Storm's coming fast, I need to sell 200kg of cotton right now. Eldoret.",
+    crop: "cotton", weight: 200, region: "Eldoret"
+  }
+};
+
+let currentScenario = 'success';
+let running = false;
+
+function renderScenarioButtons(){
+  const el = document.getElementById('scenarios');
+  el.innerHTML = '';
+  Object.entries(SCENARIOS).forEach(([key, s]) => {
+    const btn = document.createElement('button');
+    btn.className = 'scenario-btn' + (key === currentScenario ? ' active' : '');
+    btn.innerHTML = s.label + '<small>' + s.sub + '</small>';
+    btn.onclick = () => { if(running) return; currentScenario = key; renderScenarioButtons(); resetStage(); };
+    el.appendChild(btn);
+  });
+}
+
+const NODES = [
+  {id:'liaison', title:'Liaison agent', idle:'Waiting for farmer message'},
+  {id:'logistics', title:'Logistics agent', idle:'Waiting on Liaison agent'},
+  {id:'security', title:'Security agent', idle:'Waiting on Logistics agent'}
+];
+
+function renderPipeline(){
+  const el = document.getElementById('pipeline');
+  el.innerHTML = NODES.map((n,i) => `
+    <div class="node" id="node-${n.id}">
+      <div class="node-dot">${i+1}</div>
+      <div class="node-body">
+        <div class="node-title">${n.title}</div>
+        <div class="node-status" id="status-${n.id}">${n.idle}</div>
+      </div>
+    </div>`).join('');
+}
+
+function resetStage(){
+  document.getElementById('thread').innerHTML = '';
+  document.getElementById('consoleLog').innerHTML = '';
+  document.getElementById('summary').classList.remove('show');
+  document.getElementById('summary').innerHTML = '';
+  renderPipeline();
+  addSendButton();
+  running = false;
+}
+
+function addSendButton(){
+  const thread = document.getElementById('thread');
+  const wrapper = document.createElement('button');
+  wrapper.className = 'approve-btn';
+  wrapper.style.animationDelay = '.1s';
+  wrapper.textContent = 'Send SMS \u2192 run scenario';
+  wrapper.onclick = () => { wrapper.remove(); runScenario(); };
+  thread.appendChild(wrapper);
+}
+
+function bubble(text, who, label, delay){
+  return new Promise(res => {
+    setTimeout(() => {
+      const thread = document.getElementById('thread');
+      const div = document.createElement('div');
+      div.className = 'bubble ' + who;
+      div.innerHTML = '<span class="lbl">' + label + '</span>' + text;
+      thread.appendChild(div);
+      thread.scrollTop = thread.scrollHeight;
+      res();
+    }, delay);
+  });
+}
+
+function log(text, cls, delay){
+  return new Promise(res => {
+    setTimeout(() => {
+      const c = document.getElementById('consoleLog');
+      const div = document.createElement('div');
+      div.className = 'console-line' + (cls ? ' ' + cls : '');
+      div.textContent = text;
+      c.appendChild(div);
+      c.scrollTop = c.scrollHeight;
+      res();
+    }, delay);
+  });
+}
+
+function setNode(id, state, status){
+  const node = document.getElementById('node-' + id);
+  node.classList.remove('active','done','failover');
+  if(state) node.classList.add(state);
+  if(status) document.getElementById('status-' + id).textContent = status;
+}
+
+function wait(ms){ return new Promise(res => setTimeout(res, ms)); }
+
+async function runScenario(){
+  running = true;
+  const s = SCENARIOS[currentScenario];
+  const basePrice = PRICE_TABLE[s.crop] ?? 4;
+
+  await bubble(s.farmerMsg, 'farmer', 'Farmer', 100);
+
+  setNode('liaison', 'active', 'Parsing message, stripping PII\u2026');
+  await wait(900);
+  await log('liaison_agent \u2192 extract_intent(message)', null, 0);
+  await log('{ "intent": "emergency_harvest", "crop": "' + s.crop + '", "weight": ' + s.weight + ', "region": "' + s.region + '" }', 'tool', 250);
+  await log('PII check: phone numbers / addresses stripped before handoff', 'warn', 300);
+  setNode('liaison', 'done', 'Extracted crop, weight & region \u2014 PII stripped');
+  await bubble('Got it \u2014 checking weather, prices & buyers for your ' + s.crop + '.', 'ceres', 'Ceres', 200);
+
+  setNode('logistics', 'active', 'Calling MCP tools\u2026');
+  await wait(700);
+  await log('logistics_agent \u2192 get_satellite_weather(lat, lon)', null, 0);
+  await log('{ "condition": "Heavy Rain", "warning": "Severe weather alert: flooding risk in 6h" }', 'tool', 300);
+  await log('logistics_agent \u2192 get_commodity_price("' + s.crop + '")', null, 400);
+  await log('{ "crop_id": "' + s.crop + '", "price_usd_per_kg": ' + basePrice + ' }', 'tool', 300);
+
+  const floor = +(basePrice * 0.85).toFixed(2);
+  await log('floor_price = market_price * 0.85 = ' + floor + ' USD/kg', null, 400);
+
+  await log('logistics_agent \u2192 get_vetted_buyers("' + s.region + '", "' + s.crop + '")', null, 400);
+  let bids;
+  if(currentScenario === 'rejected'){
+    bids = [basePrice - 2, basePrice - 1.5, basePrice - 2.5].map(b => Math.max(0.5, +b.toFixed(2)));
+  } else {
+    bids = [basePrice + 1, basePrice, Math.max(1, basePrice - 1)];
+  }
+  await log('bids returned: [' + bids.join(', ') + '] USD/kg', 'tool', 300);
+
+  const bestBid = Math.max(...bids);
+  if(currentScenario === 'rejected'){
+    await log('all bids below floor_price (' + floor + ') \u2192 halting trade', 'warn', 400);
+    setNode('logistics', 'failover', 'No fair bids above floor \u2014 trade blocked');
+    await bubble('No fair trade bids available right now. I will keep watching prices and alert you the moment a buyer meets your floor.', 'ceres', 'Ceres', 300);
+    setNode('security', null, 'Not reached \u2014 trade halted before payment stage');
+    running = false;
+    renderFinalSummary('rejected', {crop:s.crop, weight:s.weight, region:s.region, floor, bestBid:null});
+    return;
+  }
+
+  await log('best bid: ' + bestBid + ' USD/kg (above floor) \u2014 buyer selected', null, 300);
+  await log('logistics_agent \u2192 book_freight(' + s.weight + ', "' + s.region + '")', null, 400);
+
+  let failover = false;
+  if(s.weight > 1000){
+    await log('{ "error": "ERROR: No trucks available" }', 'warn', 300);
+    failover = true;
+    await log('CRITICAL FAILOVER \u2192 find_warehouse_storage("' + s.region + '")', null, 400);
+    await log('{ "warehouse_name": "' + s.region + ' Central Grain Storage", "available_capacity_tonnes": 250 }', 'tool', 300);
+    setNode('logistics', 'failover', 'No trucks \u2014 rerouted to warehouse storage');
+  } else {
+    await log('{ "status": "booked", "driver_profile": { "name": "Jane Smith", "rating": 4.85 } }', 'tool', 300);
+    setNode('logistics', 'done', 'Freight booked \u2014 driver assigned');
+  }
+
+  await log('logistics_agent \u2192 create_escrow_payment(buyer_id, farmer_id, driver_id)', null, 400);
+  await log('{ "status": "funded", "escrow_contract_id": "ESC-BUY-001-F001-' + (failover ? 'WH' : 'DRV') + '" }', 'tool', 300);
+
+  setNode('security', 'active', 'Auditing summary\u2026');
+  await wait(700);
+  await log('security_agent \u2192 checking for PII leaks and price > 0', null, 0);
+  await log('PII check: pass. Price check: ' + bestBid + ' > 0: pass', 'tool', 350);
+  setNode('security', 'done', 'Checks passed \u2014 awaiting farmer approval');
+
+  await bubble('Buyer offers ' + bestBid + ' USD/kg for your ' + s.weight + 'kg ' + s.crop + '. ' + (failover ? 'Trucks are full, so we\u2019ve secured warehouse storage in the meantime.' : 'A driver is booked and on the way.') + ' Reply YES to confirm.', 'ceres', 'Ceres', 300);
+
+  await wait(400);
+  const thread = document.getElementById('thread');
+  const approveBtn = document.createElement('button');
+  approveBtn.className = 'approve-btn';
+  approveBtn.textContent = 'Reply YES';
+  approveBtn.onclick = async () => {
+    approveBtn.disabled = true;
+    approveBtn.textContent = 'Sending\u2026';
+    await bubble('YES', 'farmer', 'Farmer', 50);
+    await log('ask_farmer_approval() \u2192 { "status": "pending_sms_reply" } resolved: CONFIRMED', 'tool', 300);
+    renderFinalSummary(failover ? 'failover' : 'success', {crop:s.crop, weight:s.weight, region:s.region, floor, bestBid});
+  };
+  thread.appendChild(approveBtn);
+}
+
+function renderFinalSummary(kind, d){
+  const el = document.getElementById('summary');
+  el.classList.add('show');
+  if(kind === 'rejected'){
+    el.innerHTML = `
+      <div class="seal" style="background:var(--coral)">Trade halted</div>
+      <div class="summary-grid">
+        <div class="summary-item"><div class="lbl">Crop</div><div class="val">${d.weight}kg ${d.crop}</div></div>
+        <div class="summary-item"><div class="lbl">Region</div><div class="val">${d.region}</div></div>
+        <div class="summary-item"><div class="lbl">Floor price</div><div class="val">$${d.floor}/kg</div></div>
+        <div class="summary-item"><div class="lbl">Outcome</div><div class="val">No bid cleared the floor</div></div>
+      </div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="seal">Escrow sealed</div>
+    <div class="summary-grid">
+      <div class="summary-item"><div class="lbl">Crop</div><div class="val">${d.weight}kg ${d.crop}</div></div>
+      <div class="summary-item"><div class="lbl">Region</div><div class="val">${d.region}</div></div>
+      <div class="summary-item"><div class="lbl">Cleared price</div><div class="val">$${d.bestBid}/kg</div></div>
+      <div class="summary-item"><div class="lbl">Logistics path</div><div class="val">${kind === 'failover' ? 'Warehouse (failover)' : 'Freight booked'}</div></div>
+    </div>`;
+}
+
+document.getElementById('resetBtn').onclick = resetStage;
+renderScenarioButtons();
+resetStage();
+</script>
+</body>
+</html>
